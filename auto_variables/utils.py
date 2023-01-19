@@ -9,17 +9,20 @@ dir_path = BASE_DIR / 'media/documents'
 
 class AutoVariable:
     def __init__(self, file):
-        dir_date = datetime.now().strftime("%Y-%m-%d")
-        self.custom_path = f"{dir_date}/{uuid.uuid4()}"
-        self.base_path = f"{dir_path}/{self.custom_path}"
-        self.file_name = file.name.split(".")[-2]
+        # dir_date = datetime.now().strftime("%Y-%m-%d")
+        # self.custom_path = f"{dir_date}/{uuid.uuid4()}"
+        # self.base_path = f"{dir_path}/{self.custom_path}"
+        # self.file_name = file.name.split(".")[-2]
         self.df = pd.read_excel(file)
         self.value_mean = {}
         self.category = []
 
     def info_file(self):
+        numerics = ['int16', 'int32', 'int64', 'float16', 'float32', 'float64']
+        numeric = dict(self.df.select_dtypes(include=numerics))
+        self.df = self.df.drop(numeric, axis=1)
         category = dict(self.df.nunique() <= 8)
-        return category
+        return category, numeric
 
     # def categorical_fillna(self):
     #     for col in self.df.columns:
