@@ -29,11 +29,6 @@ class ExcelFile(models.Model):
         default=0,
         help_text=_('Retry Count'),
     )
-    data = models.JSONField(
-        null=True,
-        blank=True,
-        help_text=_('Data'),
-    )
 
     class Meta:
         verbose_name = _("Excel Değişken Dosyası")

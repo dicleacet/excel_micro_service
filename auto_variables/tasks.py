@@ -17,11 +17,12 @@ def generate_download(file_id, file_url):
         instance.file = output_file
         instance.is_download = True
         instance.save()
+    return instance
 
 
 @shared_task
 def info_file(file_id):
-    instance = ExcelFile.objects.get(id=file_id)
+    instance = ExcelFile.objects.filter(id=file_id).first()
     infos, numerics = AutoVariable(instance.file).info_file()
     info_list = []
     for num in numerics:
@@ -46,6 +47,6 @@ def info_file(file_id):
                 'open_ended': True,
                 'numeric': False,
             })
-    instance.data = info_list
     instance.is_finished = True
     instance.save()
+    return info_list

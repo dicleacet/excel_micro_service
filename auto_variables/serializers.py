@@ -23,12 +23,14 @@ class VariableFileSerializer(serializers.ModelSerializer):
     class Meta:
         model = ExcelFile
         fields = (
-            'id', 'api_document_id', 'file_url', 'file', 'output_file', 'is_download', 'is_finished', 'data',
+            'id', 'api_document_id', 'file_url', 'file', 'output_file', 'is_download', 'is_finished', 'data'
         )
         read_only_fields = ('id', 'file', 'output_file', 'is_download', 'is_finished')
 
     def create(self, validated_data):
         self.instance = ExcelFile.objects.create(**validated_data)
-        generate_download.delay(self.instance.id, self.instance.file_url)
-        info_file.delay(self.instance.id)
+        generate_download(self.instance.id, self.instance.file_url)
+        infos = info_file(self.instance.id)
+        self.instance.data = infos
         return self.instance
+
