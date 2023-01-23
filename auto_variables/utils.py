@@ -1,8 +1,8 @@
-import pandas as pd
-from datetime import datetime
+import json
+import os
 import uuid
+import pandas as pd
 from app.settings import BASE_DIR
-import os, json
 
 dir_path = BASE_DIR / 'media/json_files'
 

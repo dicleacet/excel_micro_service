@@ -1,28 +1,27 @@
 from celery import shared_task
 from auto_variables.models import ExcelFile
 from django.core.files import File
-from requests import get
+import requests
 from auto_variables.utils import AutoVariable
+from app.settings import BASE_DIR
+from django.core.files.base import ContentFile
+
+dir_path = BASE_DIR / 'media/excel_files'
 
 
 @shared_task
-def generate_download(file_id, file_url):
-    instance = ExcelFile.objects.get(id=file_id)
-    response = get(file_url)
-    print(file_url)
-    with open(file_url.split('/')[-1], 'wb') as file:
-        file.write(response.content)
-    with open(file_url.split('/')[-1], 'rb') as file:
-        output_file = File(file, name='output.xlsx')
-        instance.file = output_file
-        instance.is_download = True
-        instance.save()
+def generate_download(instance):
+    response = requests.get(instance.file_url)
+    file_name = instance.file_url.split('/')[-1]
+    mem_file = ContentFile(response.content, name=file_name)
+    instance.file.save(file_name, mem_file, save=False)
+    instance.is_download = True
+    instance.save()
     return instance
 
 
 @shared_task
-def info_file(file_id):
-    instance = ExcelFile.objects.filter(id=file_id).first()
+def info_file(instance):
     infos, numerics = AutoVariable(instance.file).info_file()
     info_list = []
     for num in numerics:
