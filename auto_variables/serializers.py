@@ -2,6 +2,7 @@ from rest_framework import serializers
 from auto_variables.models import ExcelFile
 from auto_variables.tasks import generate_download
 from auto_variables.tasks import info_file
+from auto_variables.utils import AutoVariable
 
 
 class VariableInfoSerializer(serializers.Serializer):
@@ -23,9 +24,9 @@ class VariableFileSerializer(serializers.ModelSerializer):
     class Meta:
         model = ExcelFile
         fields = (
-            'id', 'api_document_id', 'file_url', 'file', 'output_file', 'is_download', 'is_finished', 'data'
+            'id', 'api_document_id', 'file_url', 'data'
         )
-        read_only_fields = ('id', 'file', 'output_file', 'is_download', 'is_finished')
+        read_only_fields = ('id',)
 
     def create(self, validated_data):
         self.instance = ExcelFile.objects.create(**validated_data)
@@ -34,3 +35,21 @@ class VariableFileSerializer(serializers.ModelSerializer):
         self.instance.data = infos
         return self.instance
 
+
+class CategoricalVariableSerializer(serializers.Serializer):
+    data = VariableInfoSerializer(many=True, write_only=True, allow_null=False, required=True)
+    id = serializers.IntegerField(allow_null=False, required=True)
+    value_mean = serializers.CharField(read_only=True, allow_null=False)
+    output_file = serializers.CharField(read_only=True, allow_null=False)
+
+    def create(self, validated_data):
+        self.instance = ExcelFile.objects.filter(id=validated_data['id']).first()
+        data = validated_data.get('data')
+        value_mean, file_path = AutoVariable(self.instance.file).split_data(data)
+        self.instance.value_mean = value_mean
+        self.instance.output_file = file_path
+        self.instance.save()
+        return self.instance
+
+    def update(self, instance, validated_data):
+        return CategoricalVariableSerializer(**validated_data)

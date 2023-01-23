@@ -18,3 +18,13 @@ class VariableFileUpload(APIView):
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 
+class CategoricalVariable(APIView):
+    serializer_class = serializers.CategoricalVariableSerializer
+    permission_classes = (IsAuthenticated,)
+
+    @extend_schema(tags=['auto_variable - Categorical'], request=serializer_class)
+    def post(self, request):
+        serializer = self.serializer_class(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data, status=status.HTTP_201_CREATED)

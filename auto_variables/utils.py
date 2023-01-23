@@ -2,19 +2,18 @@ import pandas as pd
 from datetime import datetime
 import uuid
 from app.settings import BASE_DIR
-import os
+import os, json
 
-dir_path = BASE_DIR / 'media/documents'
+dir_path = BASE_DIR / 'media/json_files'
 
 
 class AutoVariable:
     def __init__(self, file):
-        # dir_date = datetime.now().strftime("%Y-%m-%d")
-        # self.custom_path = f"{dir_date}/{uuid.uuid4()}"
-        # self.base_path = f"{dir_path}/{self.custom_path}"
-        # self.file_name = file.name.split(".")[-2]
         self.df = pd.read_excel(file)
-        self.value_mean = {}
+        self.value_mean = {
+            "columns": [],
+            "rows": []
+        }
         self.category = []
 
     def info_file(self):
@@ -24,29 +23,67 @@ class AutoVariable:
         category = dict(self.df.nunique() <= 8)
         return category, numeric
 
-    # def categorical_fillna(self):
-    #     for col in self.df.columns:
-    #         if len(self.df[col].unique()) <= 8:
-    #             shape = dict(self.df.pivot_table(columns=[col], aggfunc='size'))
-    #             try:
-    #                 self.df[col] = self.df[col].fillna(min(shape))
-    #             except:
-    #                 continue
+    # def categorical_fill(self, category):
+    #     for col in category:
+    #         shape = dict(self.df.pivot_table(columns=[col], aggfunc='size'))
+    #         try:
+    #             print(self.df[col])
+    #             self.df[col] = self.df[col].fillna(min(shape))
+    #         except TypeError:
+    #             self.df[col] = self.df[col].fillna(0)
 
-    # def convert_csv(self):
-    #     if not os.path.isdir(self.base_path):
-    #         os.makedirs(self.base_path)
-    #     self.df.to_csv(f"{self.base_path}/{self.file_name}.csv")
-    #
-    # def convert_categorical_data(self):
-    #     self.categorical_fillna()
-    #     for col in self.df.columns:
-    #         if len(self.df[col].unique()) <= 8:
-    #             dataframe = self.df[col].astype('category')
-    #             self.value_mean[col] = dict(enumerate(dataframe.cat.categories))
-    #             self.df[col] = dataframe.cat.codes
-    #     self.convert_csv()
-    #     return f"documents/{self.custom_path}/{self.file_name}.csv", self.value_mean
-    #
-    #
+    def convert_json(self, datas):
+        dict_data = [
+                    {
+                        "numeric": datas['numeric'],
+                        "alias":[],
+                    },
+                    {
+                        "categorical": datas['categorical'],
+                        "alias": [],
+                    },
+                    {
+                        "open_ended": datas['open_ended'],
+                        "alias": [],
+                    }
+                ]
+        if not os.path.exists(dir_path):
+            os.mkdir(dir_path)
+        for data in datas['numeric']:
+            dict_data[0]['alias'].append(list(self.df[data]))
+        for data in datas['categorical']:
+            dict_data[1]['alias'].append(list(self.df[data]))
+        for data in datas['open_ended']:
+            dict_data[2]['alias'].append(list(self.df[data]))
+        file_name = str(uuid.uuid4()) + '.json'
+        json.dump(dict_data, open(dir_path / file_name, 'w'))
+        return f'media/json_files/{file_name}'
 
+    def convert_categorical_data(self, category):
+        for col in category:
+            self.value_mean['columns'].append(col)
+            dataframe = self.df[col].astype('category')
+            self.value_mean['rows'].append(dict(enumerate(dataframe.cat.categories)))
+            self.df[col] = dataframe.cat.codes
+        return self.value_mean
+
+    def split_data(self, datas):
+        numeric = []
+        categorical = []
+        open_ended = []
+        self.df.fillna(0, inplace=True)
+        for data in datas:
+            if data['categorical']:
+                categorical.append(data['name'])
+            if data['open_ended']:
+                open_ended.append(data['name'])
+            if data['numeric']:
+                numeric.append(data['name'])
+        value_mean = self.convert_categorical_data(categorical)
+        data = {
+            'numeric': numeric,
+            'categorical': categorical,
+            'open_ended': open_ended,
+        }
+        file_path = self.convert_json(data)
+        return value_mean, file_path
