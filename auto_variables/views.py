@@ -16,10 +16,14 @@ class VariableFileUpload(APIView):
         limit = 5 * 1024 * 1024
         file_url = request.data['file_url']
         if int(requests.get(file_url).headers['Content-Length']) > limit:
-            # TODO Celery
+            serializer = serializers.VariableFileSerializer(data=request.data)
+            serializer.is_valid(raise_exception=True)
+            instance = serializer.save()
+            generate_download.delay(instance)
+            info_file.delay(instance)
             return Response({'info': 'İsteğiniz kuyruğa alındı.'}, status=status.HTTP_202_ACCEPTED)
         else:
-            serializer = serializers.VariableFileSerializer(data=request.data, context={'request': request})
+            serializer = serializers.VariableFileSerializer(data=request.data)
             serializer.is_valid(raise_exception=True)
             instance = serializer.save()
             generate_download(instance)
