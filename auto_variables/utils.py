@@ -10,10 +10,6 @@ dir_path = BASE_DIR / 'media/json_files'
 class AutoVariable:
     def __init__(self, file):
         self.df = pd.read_excel(file)
-        self.value_mean = {
-            "columns": [],
-            "rows": []
-        }
         self.category = []
 
     def info_file(self):
@@ -33,57 +29,60 @@ class AutoVariable:
     #             self.df[col] = self.df[col].fillna(0)
 
     def convert_json(self, datas):
-        dict_data = [
-                    {
-                        "numeric": datas['numeric'],
-                        "alias":[],
-                    },
-                    {
-                        "categorical": datas['categorical'],
-                        "alias": [],
-                    },
-                    {
-                        "open_ended": datas['open_ended'],
-                        "alias": [],
-                    }
-                ]
+        print(datas)
         if not os.path.exists(dir_path):
             os.mkdir(dir_path)
-        for data in datas['numeric']:
-            dict_data[0]['alias'].append(list(self.df[data]))
-        for data in datas['categorical']:
-            dict_data[1]['alias'].append(list(self.df[data]))
-        for data in datas['open_ended']:
-            dict_data[2]['alias'].append(list(self.df[data]))
+        for data in datas['numeric']['columns']:
+            datas['numeric']['rows'].append(list(self.df[data]))
+        for data in datas['open_ended']['columns']:
+            datas['open_ended']['rows'].append(list(self.df[data]))
         file_name = str(uuid.uuid4()) + '.json'
-        json.dump(dict_data, open(dir_path / file_name, 'w'))
+        json.dump(datas, open(dir_path / file_name, 'w'))
         return f'media/json_files/{file_name}'
 
     def convert_categorical_data(self, category):
+        all_rows = []
         for col in category:
-            self.value_mean['columns'].append(col)
+            rows = []
             dataframe = self.df[col].astype('category')
-            self.value_mean['rows'].append(dict(enumerate(dataframe.cat.categories)))
+            alias = dict(enumerate(dataframe.cat.categories))
             self.df[col] = dataframe.cat.codes
-        return self.value_mean
+            for key in self.df[col]:
+                value = alias.get(key)
+                row = {
+                    'value': value,
+                    'alias': key
+                }
+                rows.append(row)
+            all_rows.append(rows)
+        return all_rows
 
     def split_data(self, datas):
-        numeric = []
-        categorical = []
-        open_ended = []
-        self.df.fillna(0, inplace=True)
+        numeric = {
+            'columns': [],
+            'rows': []
+        }
+        categorical = {
+            'columns': [],
+            'rows': []
+        }
+        open_ended = {
+            'columns': [],
+            'rows': []
+        }
         for data in datas:
             if data['categorical']:
-                categorical.append(data['name'])
+                categorical['columns'].append(data['name'])
             if data['open_ended']:
-                open_ended.append(data['name'])
+                open_ended['columns'].append(data['name'])
             if data['numeric']:
-                numeric.append(data['name'])
-        value_mean = self.convert_categorical_data(categorical)
+                numeric['columns'].append(data['name'])
+        categorical_rows = self.convert_categorical_data(categorical['columns'])
+        categorical['rows'] = categorical_rows
         data = {
             'numeric': numeric,
             'categorical': categorical,
             'open_ended': open_ended,
         }
         file_path = self.convert_json(data)
-        return value_mean, file_path
+        return file_path
